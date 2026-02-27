@@ -1290,43 +1290,51 @@ function renderPriceThreshold() {
     const upStr = isNaN(upTarget) ? '—' : fmtPrice(upTarget);
     const dnStr = isNaN(dnTarget) ? '—' : fmtPrice(dnTarget);
 
+    const upPctStr = (upPct >= 0 ? '+' : '') + upPct.toFixed(2) + '%';
+    const dnPctStr = (dnPct >= 0 ? '+' : '') + dnPct.toFixed(2) + '%';
+
     results.innerHTML = `
+      <div class="dist-note" style="margin-bottom:8px;color:var(--dim)">
+        Targets converted to relative moves: <strong>${upPctStr}</strong> upside &nbsp;/&nbsp; <strong>${dnPctStr}</strong> downside.
+        Each of the ${n} analog periods (1990&ndash;2025) is checked for whether SPX moved
+        that far from <em>its own starting price</em> within ${h} days &mdash; not whether it ever reached ${upStr} historically.
+      </div>
       <div class="pt-table">
         <div class="pt-row" style="background:transparent;font-size:10px;color:var(--muted);padding:2px 10px;">
           <div>Scenario</div><div style="text-align:right">Prob</div><div>Count</div><div>Frequency</div>
         </div>
-        <div class="pt-row" data-tip="Fraction of analog periods where SPX High exceeded ${upStr} at any point within ${h} trading days.">
-          <div class="pt-label">Touch upside ${upStr}</div>
+        <div class="pt-row" data-tip="In how many analog periods did SPX rise ${upPctStr} (equivalent to today&apos;s target of ${upStr}) from that period&apos;s starting price at any point within ${h} trading days? Uses intraday High bars so partial-day touches count.">
+          <div class="pt-label">Analog moved ${upPctStr} upside</div>
           <div class="pt-prob ret-pos">${pUp.toFixed(1)}%</div>
           <div class="pt-count">${tUp}/${n}</div>
           ${bar(pUp, 'ret-pos')}
         </div>
-        <div class="pt-row" data-tip="Fraction of analog periods where SPX Low dropped below ${dnStr} at any point within ${h} trading days.">
-          <div class="pt-label">Touch downside ${dnStr}</div>
+        <div class="pt-row" data-tip="In how many analog periods did SPX fall ${dnPctStr} (equivalent to today&apos;s target of ${dnStr}) from that period&apos;s starting price at any point within ${h} trading days? Uses intraday Low bars.">
+          <div class="pt-label">Analog moved ${dnPctStr} downside</div>
           <div class="pt-prob ret-neg">${pDn.toFixed(1)}%</div>
           <div class="pt-count">${tDn}/${n}</div>
           ${bar(pDn, 'ret-neg')}
         </div>
-        <div class="pt-row pt-divider" data-tip="Fraction of analog periods where the upside target was reached first — or only the upside was reached. If both targets hit, whichever intraday extreme came first wins.">
-          <div class="pt-label">Upside first (or only upside)</div>
+        <div class="pt-row pt-divider" data-tip="Of all analog periods, the fraction where the upside move (${upPctStr}) was reached first — or only the upside was reached. If both targets were hit, whichever intraday extreme came first determines direction.">
+          <div class="pt-label">Upside ${upPctStr} came first (or only)</div>
           <div class="pt-prob ret-pos">${pUF.toFixed(1)}%</div>
           <div class="pt-count">${onlyUp + bothUpFirst}/${n}</div>
           ${bar(pUF, 'ret-pos')}
         </div>
-        <div class="pt-row" data-tip="Fraction of analog periods where the downside target was reached first — or only the downside was reached.">
-          <div class="pt-label">Downside first (or only downside)</div>
+        <div class="pt-row" data-tip="Of all analog periods, the fraction where the downside move (${dnPctStr}) was reached first — or only the downside was reached.">
+          <div class="pt-label">Downside ${dnPctStr} came first (or only)</div>
           <div class="pt-prob ret-neg">${pDF.toFixed(1)}%</div>
           <div class="pt-count">${onlyDn + bothDnFirst}/${n}</div>
           ${bar(pDF, 'ret-neg')}
         </div>
-        <div class="pt-row" data-tip="Fraction of analog periods where SPX stayed between both targets for the full ${h}-day horizon.">
-          <div class="pt-label">Neither target touched</div>
+        <div class="pt-row" data-tip="Fraction of analog periods where SPX stayed within both bounds — never moved ${upPctStr} up or ${dnPctStr} down — for the full ${h}-day horizon.">
+          <div class="pt-label">Stayed within range (neither touched)</div>
           <div class="pt-prob" style="color:var(--muted)">${pNone.toFixed(1)}%</div>
           <div class="pt-count">${neither}/${n}</div>
           ${bar(pNone, '')}
         </div>
       </div>
-      <div class="dist-note">${n} analog periods &middot; ${h}d horizon &middot; upside ${upPct >= 0 ? '+' : ''}${upPct.toFixed(2)}% &middot; downside ${dnPct.toFixed(2)}% &middot; uses intraday High/Low bars</div>
+      <div class="dist-note">${n} analog periods &middot; ${h}d horizon &middot; intraday High/Low bars &middot; today&apos;s ${upStr} = ${upPctStr} move, ${dnStr} = ${dnPctStr} move</div>
     `;
   }
 
