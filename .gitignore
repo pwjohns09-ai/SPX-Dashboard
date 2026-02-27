@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# v2 project (separate, not part of public dashboard)
+v2/
+
+# Unused / private files
+email_digest.py
+diamonds_digest.md
+update_log.txt
+test.pdf
+spx_yf.csv
+config.json
+
+# v1 ML / experiment files (not needed for v3)
+ml_predictor.py
+ml_results.json
+experiment.py
+optimize_weights.py
+validate_weights.py
+optimized_weights.json
+
+# Windows shortcuts
+*.bat

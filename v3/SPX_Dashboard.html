@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPX Dashboard v3</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d0f;
+      --surface:  #141418;
+      --border:   #25252d;
+      --muted:    #555568;
+      --text:     #d4d4e0;
+      --dim:      #8888a0;
+      --green:    #34d399;
+      --red:      #f87171;
+      --yellow:   #fbbf24;
+      --blue:     #60a5fa;
+      --purple:   #a78bfa;
+      --accent:   #3b82f6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .page { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #e2e2f0;
+      letter-spacing: -0.3px;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--dim);
+    }
+    .events-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .event-pill {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #1e1e2a;
+      border: 1px solid var(--border);
+      color: var(--dim);
+      white-space: nowrap;
+    }
+    .event-pill.soon   { border-color: #854d0e; background: #1c130a; color: #fde68a; }
+    .event-pill.medium { border-color: #374151; background: #111827; color: #93c5fd; }
+    .event-pill.far    { border-color: var(--border); color: var(--muted); }
+    .event-pill.today  { border-color: #dc2626; background: #1c0a0a; color: #fca5a5; }
+
+    /* ── Section cards ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Probability cards ── */
+    .prob-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 800px) {
+      .prob-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .prob-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .prob-card {
+      background: #0f0f14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .prob-card.bull { border-top: 2px solid var(--green); }
+    .prob-card.mid  { border-top: 2px solid var(--yellow); }
+    .prob-card.bear { border-top: 2px solid var(--red); }
+
+    .prob-horizon {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .prob-pct {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+    .prob-pct.green { color: var(--green); }
+    .prob-pct.yellow { color: var(--yellow); }
+    .prob-pct.red { color: var(--red); }
+    .prob-label { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .prob-median { font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .prob-median.pos { color: var(--green); }
+    .prob-median.neg { color: var(--red); }
+    .prob-range { font-size: 11px; color: var(--dim); }
+    .prob-n { font-size: 10px; color: #444455; margin-top: 3px; }
+
+    .prob-footer {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--dim);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .prob-footer span { display: flex; align-items: center; gap: 4px; }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1a2a1a;
+      color: var(--green);
+      border: 1px solid #2a4a2a;
+    }
+    .badge.bear {
+      background: #2a1a1a;
+      color: var(--red);
+      border-color: #4a2a2a;
+    }
+
+    /* ── Market context ── */
+    .context-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 20px;
+    }
+    .ctx-item {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 13px;
+    }
+    .ctx-label { color: var(--dim); font-size: 12px; }
+    .ctx-val { font-weight: 600; color: var(--text); }
+    .ctx-val.pos { color: var(--green); }
+    .ctx-val.neg { color: var(--red); }
+    .ctx-sep {
+      color: var(--border);
+      font-size: 16px;
+      line-height: 1;
+      align-self: center;
+    }
+
+    /* ── Analog matches table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      text-align: right;
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    th:first-child, th:nth-child(2) { text-align: left; }
+    th:hover { color: var(--text); }
+    th.sorted { color: var(--blue); }
+    tbody tr {
+      border-bottom: 1px solid #1a1a22;
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: #1a1a22; }
+    td {
+      padding: 6px 8px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    td:first-child, td:nth-child(2) { text-align: left; }
+    td.date-cell { color: var(--dim); font-size: 12px; }
+    td.sim-cell { color: var(--blue); }
+    td.ret-pos { color: var(--green); }
+    td.ret-neg { color: var(--red); }
+    td.ret-null { color: #333344; }
+
+    /* ── Heatmap ── */
+    .heatmap-wrap { overflow-x: auto; }
+    .heatmap-table {
+      border-collapse: separate;
+      border-spacing: 2px;
+      font-size: 11.5px;
+    }
+    .heatmap-table th {
+      padding: 3px 8px;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      cursor: default;
+    }
+    .heatmap-table td {
+      width: 52px;
+      height: 28px;
+      text-align: center;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: default;
+    }
+    .hm-year {
+      text-align: right;
+      padding-right: 10px;
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .hm-empty { background: #0f0f14; color: var(--muted); }
+
+    /* ── Loading / error ── */
+    .loading { color: var(--dim); font-size: 13px; padding: 20px 0; }
+    .error-msg {
+      background: #1c0a0a;
+      border: 1px solid #4a1a1a;
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Misc ── */
+    .divider {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+      align-self: center;
+    }
+
+    /* ── Tooltips ── */
+    [data-tip] { position: relative; cursor: help; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a28;
+      border: 1px solid #38384e;
+      color: #d4d4e0;
+      font-size: 11px;
+      line-height: 1.5;
+      padding: 7px 11px;
+      border-radius: 6px;
+      white-space: normal;
+      width: 230px;
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: normal;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+    }
+    [data-tip]:hover::after { opacity: 1; }
+    [data-tip].tip-left::after  { left: auto; right: 0; transform: none; }
+    [data-tip].tip-right::after { left: 0;    transform: none; }
+
+    /* ── Distribution section ── */
+    .dist-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .dist-tab {
+      padding: 4px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: border-color 0.1s, color 0.1s, background 0.1s;
+    }
+    .dist-tab:hover { border-color: var(--muted); color: var(--text); }
+    .dist-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .dist-horizon { display: none; }
+    .dist-horizon.active { display: block; }
+    .dist-sub-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 16px 0 8px;
+    }
+    .dist-sub-title:first-child { margin-top: 0; }
+    .pct-grid {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pct-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #0f0f14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      min-width: 58px;
+    }
+    .pct-p    { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+    .pct-ret  { font-size: 12.5px; font-weight: 600; }
+    .pct-ret.pos { color: var(--green); }
+    .pct-ret.neg { color: var(--red); }
+    .pct-ret.neutral { color: var(--dim); }
+    .pct-price { font-size: 9px; color: #444455; margin-top: 2px; }
+    .dist-table {
+      border-collapse: collapse;
+      font-size: 12.5px;
+      width: 100%;
+      max-width: 680px;
+    }
+    .dist-table th {
+      text-align: right;
+      padding: 5px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      cursor: default;
+      white-space: nowrap;
+    }
+    .dist-table th:first-child { text-align: left; }
+    .dist-table td {
+      padding: 5px 10px;
+      text-align: right;
+      border-bottom: 1px solid #1a1a22;
+      white-space: nowrap;
+    }
+    .dist-table td:first-child { text-align: left; font-weight: 600; }
+    .dist-table .cov-label { color: var(--blue); }
+    .dist-table .sig-label { color: var(--purple); }
+    .dist-note { font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Backtest quality ── */
+    .cal-panel { display: none; }
+    .cal-panel.active { display: block; }
+    .bt-note { font-size: 10px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+    /* ── Price threshold tool ── */
+    .pt-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .pt-current { font-size: 13px; color: var(--dim); }
+    .pt-inputs { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+    .pt-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .pt-inputs input, .pt-inputs select { background: #1e2029; border: 1px solid #333; color: var(--text); padding: 5px 9px; border-radius: 4px; font-size: 13px; width: 120px; outline: none; }
+    .pt-inputs input:focus, .pt-inputs select:focus { border-color: var(--blue); }
+    .pt-pct { font-size: 11px; margin-top: 2px; height: 14px; }
+    .pt-table { display: flex; flex-direction: column; gap: 4px; }
+    .pt-row { display: grid; grid-template-columns: 220px 58px 64px 1fr; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: var(--card); }
+    .pt-row.pt-divider { margin-top: 4px; border-top: 1px solid #2a2a2a; }
+    .pt-label { font-size: 12px; color: var(--dim); cursor: default; }
+    .pt-prob { font-size: 15px; font-weight: 700; text-align: right; }
+    .pt-count { font-size: 10px; color: var(--muted); }
+    .pt-bar { font-size: 9px; letter-spacing: -1.5px; font-family: monospace; }
+
+    /* ── Regime card ── */
+    .regime-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+    .regime-dim { background: var(--card); border-radius: 6px; padding: 10px 14px; border-left: 3px solid transparent; }
+    .regime-dim.bull { border-color: var(--green); }
+    .regime-dim.bear { border-color: var(--red); }
+    .regime-dim.neutral { border-color: var(--muted); }
+    .regime-dim.warn { border-color: var(--yellow); }
+    .regime-dim-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .regime-dim-value { font-size: 14px; font-weight: 700; }
+    .regime-dim-detail { font-size: 11px; color: var(--dim); margin-top: 3px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+<div class="page" id="app">
+  <div class="loading">Loading...</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Data loading
+// ─────────────────────────────────────────────────────────────────────────────
+let indicator    = null;
+let csvData      = null;
+let backtestData = null;
+
+async function loadAll() {
+  try {
+    const [indResp, csvResp, btResp] = await Promise.all([
+      fetch('indicator.json?_='        + Date.now()),
+      fetch('../spx_data.csv?_='       + Date.now()),
+      fetch('backtest_results.json?_=' + Date.now()),
+    ]);
+    if (!indResp.ok) throw new Error('indicator.json not found — run calculate_indicator.py first');
+    indicator = await indResp.json();
+    if (csvResp.ok) {
+      const text = await csvResp.text();
+      csvData = parseCSV(text);
+    }
+    if (btResp.ok) backtestData = await btResp.json();
+    render();
+  } catch (e) {
+    document.getElementById('app').innerHTML =
+      `<div class="error-msg">Failed to load: ${e.message}</div>`;
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',');
+    const row = {};
+    headers.forEach((h, j) => { row[h] = vals[j] ? vals[j].trim() : ''; });
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  app.appendChild(renderHeader());
+  app.appendChild(renderProbCards());
+  app.appendChild(renderRegimeCard());
+  app.appendChild(renderContext());
+  app.appendChild(renderPriceThreshold());
+  app.appendChild(renderMatchesTable());
+  app.appendChild(renderDistributions());
+  app.appendChild(renderBacktestQuality());
+  if (csvData) app.appendChild(renderHeatmap());
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+function renderHeader() {
+  const dr = indicator.data_range || {};
+  const n  = dr.trading_days ? dr.trading_days.toLocaleString() : '?';
+  const range = (dr.start && dr.end) ? `${dr.start} to ${dr.end}  (${n} trading days)` : '';
+  const genAt = indicator.generated_at
+    ? new Date(indicator.generated_at).toLocaleString()
+    : '';
+
+  const div = document.createElement('div');
+  div.className = 'header';
+  div.innerHTML = `
+    <div class="header-top">
+      <span class="header-title">SPX Dashboard</span>
+      <span class="header-sub">${range}</span>
+      <span class="header-sub" style="margin-left:auto;font-size:11px;">${genAt ? 'Generated ' + genAt : ''}</span>
+    </div>
+    <div class="events-bar" id="events-bar"></div>
+  `;
+
+  // Events
+  const bar = div.querySelector('#events-bar');
+  const events = indicator.upcoming_events || [];
+  if (events.length === 0) {
+    bar.innerHTML = '<span class="event-pill far">No upcoming events</span>';
+  } else {
+    // Show today's events + next occurrence of each type
+    const seen = new Set();
+    events.forEach(ev => {
+      const key = ev.type + ':' + ev.date;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const td = ev.trading_days_away;
+      const cls = td === 0 ? 'today' : td <= 5 ? 'soon' : td <= 15 ? 'medium' : 'far';
+      const when = td === 0 ? 'TODAY' : td === 1 ? 'tomorrow' : `in ${td}td`;
+      bar.innerHTML += `<span class="event-pill ${cls}">${ev.type} ${when} (${ev.date})</span>`;
+    });
+  }
+
+  return div;
+}
+
+// ── Probability cards ────────────────────────────────────────────────────────
+function renderProbCards() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const fwds = indicator.forward_probabilities || [];
+  if (fwds.length === 0) {
+    sec.innerHTML = '<div class="loading">No forward probability data.</div>';
+    return sec;
+  }
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Calibrated probability of SPX closing higher at each forward horizon, derived from historical analog matching. Isotonic regression corrects raw probabilities using walk-forward backtest results.';
+  title.textContent = 'Forward Probabilities';
+  sec.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'prob-grid';
+
+  fwds.forEach(fp => {
+    const cal  = fp.prob_up_calibrated_pct != null ? fp.prob_up_calibrated_pct : fp.prob_up_pct;
+    const tier = cal >= 60 ? 'bull' : cal >= 50 ? 'mid' : 'bear';
+    const pctCls = cal >= 60 ? 'green' : cal >= 50 ? 'yellow' : 'red';
+    const med    = fp.median_ret;
+    const medCls = med >= 0 ? 'pos' : 'neg';
+    const medStr = (med >= 0 ? '+' : '') + med.toFixed(1) + '%';
+    const p10Str = (fp.p10 >= 0 ? '+' : '') + fp.p10.toFixed(1) + '%';
+    const p90Str = (fp.p90 >= 0 ? '+' : '') + fp.p90.toFixed(1) + '%';
+    const shortLabel = fp.horizon + 'd';
+    const dateMatch = (fp.label || '').match(/\((.+)\)/);
+    const dateStr = dateMatch ? dateMatch[1] : '';
+
+    // Signal z-score per card
+    const sigZ = fp.signal_zscore != null ? fp.signal_zscore : null;
+    const sigZStr = sigZ != null ? (sigZ >= 0 ? '+' : '') + sigZ.toFixed(2) : null;
+    const sigZCls = sigZ == null ? '' : Math.abs(sigZ) >= 2 ? 'color:var(--red)' : Math.abs(sigZ) >= 1 ? 'color:var(--yellow)' : 'color:var(--muted)';
+
+    grid.innerHTML += `
+      <div class="prob-card ${tier}">
+        <div class="prob-horizon" data-tip="${shortLabel} forward horizon — probability that SPX closes higher ${fp.horizon} trading day${fp.horizon > 1 ? 's' : ''} from now.">${shortLabel}</div>
+        <div class="prob-pct ${pctCls}">${cal.toFixed(1)}%</div>
+        <div class="prob-label" data-tip="Calibrated probability using isotonic regression fitted to walk-forward backtest results. Corrects for systematic over- or under-estimation in the raw analog vote.${dateStr ? ' Target date: ' + dateStr + '.' : ''}">calibrated${dateStr ? ' &middot; ' + dateStr : ''}</div>
+        <div class="prob-median ${medCls}" data-tip="Median forward return across all analog matches. Half of historical analogs returned more than this, half returned less.">${medStr} median</div>
+        <div class="prob-range" data-tip="P10 / P90: the 10th and 90th percentile of analog forward returns. The middle 80% of historical outcomes fell within this range.">${p10Str} / ${p90Str}</div>
+        <div class="prob-n" data-tip="Number of historical analog matches used for this horizon. Z-score measures how unusual today is vs history: near 0 = normal, above 1 = unusual, above 2 = extreme (treat estimates with caution).">${fp.n_samples} analogs${sigZStr != null ? ` &middot; <span style="${sigZCls}">z ${sigZStr}</span>` : ''}</div>
+      </div>`;
+  });
+
+  sec.appendChild(grid);
+
+  // Footer: regime + total analogs
+  const regime  = indicator.regime || {};
+  const regLabel = regime.label || 'Unknown';
+  const isBull   = regime.above_200ma === 1;
+  const regCls   = isBull ? '' : 'bear';
+  const totalAnalogs = fwds.reduce((s, f) => s + (f.n_samples || 0), 0);
+
+  const footer = document.createElement('div');
+  footer.className = 'prob-footer';
+  footer.innerHTML = `
+    <span data-tip="Bull = SPX above its 200-day moving average. Bear = below. The analog engine only matches today against historical days in the same regime." style="cursor:help">Regime: <span class="badge ${regCls}">${regLabel}</span></span>
+    <div class="divider"></div>
+    <span style="color:var(--dim)">${totalAnalogs.toLocaleString()} total analog-horizon pairs</span>
+    <div class="divider"></div>
+    <span style="color:var(--muted);font-size:11px" data-tip="Signal z-score per card: how hard it was to find good analog matches today. Near 0 = routine conditions with many close historical parallels. Above 1 = unusual. Above 2 = historically rare — treat probability estimates with extra skepticism.">z-score: normal &lt;1 &middot; unusual &gt;1 &middot; extreme &gt;2</span>
+  `;
+  sec.appendChild(footer);
+  return sec;
+}
+
+// ── Market context ───────────────────────────────────────────────────────────
+function renderContext() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const p = indicator.current_profile || {};
+  if (!p.close) {
+    sec.innerHTML = '<div class="loading">No market context data.</div>';
+    return sec;
+  }
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Current market indicators. Hover each item for a description. These features are used by the analog engine to find historically similar periods.';
+  title.textContent = 'Market Context  —  ' + (p.date || '');
+  sec.appendChild(title);
+
+  const items = [];
+
+  // SPX close
+  items.push({ label: 'SPX', val: '$' + p.close.toLocaleString(undefined, {minimumFractionDigits:2}) });
+
+  // VIX
+  if (p.vix_close != null) {
+    const vixCls = p.vix_close > 25 ? 'neg' : p.vix_close < 15 ? 'pos' : '';
+    items.push({ label: 'VIX', val: p.vix_close.toFixed(1), cls: vixCls });
+  }
+  // VIX/RV ratio
+  if (p.vix_vs_rv != null) {
+    const vvrCls = p.vix_vs_rv > 1.2 ? 'pos' : p.vix_vs_rv < 0.9 ? 'neg' : '';
+    items.push({ label: 'VIX/RV', val: p.vix_vs_rv.toFixed(2), cls: vvrCls });
+  }
+
+  items.push('sep');
+
+  // RSI
+  if (p.rsi_14 != null) {
+    const rsiCls = p.rsi_14 > 70 ? 'neg' : p.rsi_14 < 30 ? 'pos' : '';
+    items.push({ label: 'RSI(14)', val: p.rsi_14.toFixed(1), cls: rsiCls });
+  }
+  // BB%B
+  if (p.bb_pct_b != null) {
+    const bbCls = p.bb_pct_b > 0.9 ? 'neg' : p.bb_pct_b < 0.1 ? 'pos' : '';
+    items.push({ label: 'BB%B', val: p.bb_pct_b.toFixed(2), cls: bbCls });
+  }
+
+  items.push('sep');
+
+  // Drawdown
+  if (p.drawdown_pct != null) {
+    const ddCls = p.drawdown_pct < -5 ? 'neg' : p.drawdown_pct > -1 ? 'pos' : '';
+    items.push({ label: 'Drawdown', val: (p.drawdown_pct >= 0 ? '+' : '') + p.drawdown_pct.toFixed(1) + '%', cls: ddCls });
+  }
+  // Distance from 20d high
+  if (p.dist_from_20d_high_pct != null) {
+    const cls = p.dist_from_20d_high_pct < -3 ? 'neg' : p.dist_from_20d_high_pct > -0.5 ? 'pos' : '';
+    items.push({ label: 'vs 20d hi', val: (p.dist_from_20d_high_pct >= 0 ? '+' : '') + p.dist_from_20d_high_pct.toFixed(1) + '%', cls: cls });
+  }
+  // Dist from 50MA
+  if (p.dist_50ma_pct != null) {
+    const cls = p.dist_50ma_pct >= 0 ? 'pos' : 'neg';
+    items.push({ label: 'vs 50MA', val: (p.dist_50ma_pct >= 0 ? '+' : '') + p.dist_50ma_pct.toFixed(1) + '%', cls: cls });
+  }
+  // Dist from 200MA
+  if (p.dist_200ma_pct != null) {
+    const cls = p.dist_200ma_pct >= 0 ? 'pos' : 'neg';
+    items.push({ label: 'vs 200MA', val: (p.dist_200ma_pct >= 0 ? '+' : '') + p.dist_200ma_pct.toFixed(1) + '%', cls: cls });
+  }
+
+  items.push('sep');
+
+  // Realized vol
+  if (p.realized_vol_21d != null) {
+    items.push({ label: 'RV21d', val: p.realized_vol_21d.toFixed(1) + '%' });
+  }
+  // Yield
+  if (p.yield_10y != null) {
+    items.push({ label: '10Y Yield', val: p.yield_10y.toFixed(2) + '%' });
+  }
+  // Curve slope
+  if (p.curve_slope != null) {
+    const cls = p.curve_slope < 0 ? 'neg' : 'pos';
+    items.push({ label: '10Y-3M', val: (p.curve_slope >= 0 ? '+' : '') + p.curve_slope.toFixed(2) + '%', cls: cls });
+  }
+
+  const CTX_TIPS = {
+    'SPX':      'S&P 500 index closing price.',
+    'VIX':      'CBOE 30-day implied volatility index, derived from S&P 500 options prices. Measures expected future volatility. Below 15: complacency. Above 25: elevated fear or stress.',
+    'VIX/RV':   'Implied volatility (VIX) divided by 21-day realized volatility. Above 1.2: options are expensive relative to actual vol (sellers have edge). Below 0.9: options are cheap (market may be underpricing risk).',
+    'RSI(14)':  '14-day Relative Strength Index. Momentum oscillator on a 0-100 scale. Above 70: overbought. Below 30: oversold. 40-60: neutral.',
+    'BB%B':     'Bollinger Band %B — where price sits within the 2-standard-deviation band around the 20-day MA. 0 = at lower band, 0.5 = at midpoint (20d MA), 1 = at upper band. Above 0.9: stretched up. Below 0.1: stretched down.',
+    'Drawdown': 'How far SPX has fallen from its all-time high, as a percentage. Near 0%: at or near ATH. Below -5%: meaningful pullback in progress.',
+    'vs 20d hi':'Distance from the 20-day rolling high. Measures short-term pullback depth. Near 0%: at a recent peak. Below -3%: short-term sell-off underway.',
+    'vs 50MA':  'Distance from the 50-day moving average as a percentage. Positive: price above 50MA (medium-term uptrend). Negative: below 50MA.',
+    'vs 200MA': 'Distance from the 200-day moving average. The key long-term trend divider — being above determines the BULL regime, below = BEAR. Also used as a feature in analog matching.',
+    'RV21d':    '21-day realized volatility. Annualized standard deviation of actual daily returns over the past month. Pairs with VIX to form the VIX/RV ratio.',
+    '10Y Yield':'10-year US Treasury yield. Rate environment context. Rapid rises compress equity valuations; the level alone matters less than the direction and speed of change.',
+    '10Y-3M':   'Yield curve slope: 10-year Treasury yield minus 3-month T-bill rate. Positive = normal upward-sloping curve. Negative (inverted) = historically a recession warning signal.',
+  };
+
+  const grid = document.createElement('div');
+  grid.className = 'context-grid';
+  items.forEach(item => {
+    if (item === 'sep') {
+      grid.innerHTML += '<div class="ctx-sep">|</div>';
+    } else {
+      const valCls = item.cls || '';
+      const tip = CTX_TIPS[item.label] || '';
+      grid.innerHTML += `
+        <div class="ctx-item"${tip ? ` data-tip="${tip}"` : ''}>
+          <span class="ctx-label">${item.label}</span>
+          <span class="ctx-val ${valCls}">${item.val}</span>
+        </div>`;
+    }
+  });
+
+  sec.appendChild(grid);
+  return sec;
+}
+
+// ── Analog matches table ─────────────────────────────────────────────────────
+let tableSort = { col: 'similarity_pct', dir: -1 };
+
+function renderMatchesTable() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+  sec.id = 'matches-section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Historical periods with the most similar market conditions to today, drawn from the 5-day horizon analog pool. Similarity% is the inverse-distance weight — higher means a closer match. Forward return columns show what actually happened after each analog date.';
+  title.textContent = 'Top Analog Matches  (5-day horizon, sorted by similarity)';
+  sec.appendChild(title);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  wrap.id = 'matches-table-wrap';
+  sec.appendChild(wrap);
+
+  buildMatchesTable(wrap);
+  return sec;
+}
+
+function buildMatchesTable(wrap) {
+  const matches = indicator.matches || [];
+  if (matches.length === 0) {
+    wrap.innerHTML = '<div class="loading">No analog matches found.</div>';
+    return;
+  }
+
+  const HORIZONS = [1, 5, 10, 21, 42];
+  const COL_TIPS = {
+    'date':           'Date of the historical analog period.',
+    'close':          'SPX closing price on the analog date.',
+    'similarity_pct': 'Similarity weight: inverse of the distance score, normalized so all analogs sum to 100%. Higher = closer match to today.',
+    'fwd_1':  'Actual SPX return 1 trading day after this analog date.',
+    'fwd_5':  'Actual SPX return 5 trading days after this analog date.',
+    'fwd_10': 'Actual SPX return 10 trading days after this analog date.',
+    'fwd_21': 'Actual SPX return 21 trading days after this analog date.',
+    'fwd_42': 'Actual SPX return 42 trading days after this analog date.',
+  };
+  const cols = [
+    { key: 'date',           label: 'Date',   sortKey: 'date' },
+    { key: 'close',          label: 'SPX',    sortKey: 'close' },
+    { key: 'similarity_pct', label: 'Sim%',   sortKey: 'similarity_pct' },
+    ...HORIZONS.map(h => ({ key: 'fwd_' + h, label: h + 'd', sortKey: 'fwd_' + h }))
+  ];
+
+  // Sort
+  let rows = matches.slice(0, 50);
+  rows.sort((a, b) => {
+    let av, bv;
+    if (tableSort.col === 'fwd_1' || tableSort.col === 'fwd_5' ||
+        tableSort.col === 'fwd_10' || tableSort.col === 'fwd_21' || tableSort.col === 'fwd_42') {
+      const h = tableSort.col.replace('fwd_', '');
+      av = (a.forward_returns || {})[h];
+      bv = (b.forward_returns || {})[h];
+    } else {
+      av = a[tableSort.col];
+      bv = b[tableSort.col];
+    }
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (typeof av === 'string') return tableSort.dir * av.localeCompare(bv);
+    return tableSort.dir * (av - bv);
+  });
+  rows = rows.slice(0, 20);
+
+  const table = document.createElement('table');
+  // Header
+  let thead = '<thead><tr>';
+  cols.forEach(col => {
+    const sorted = tableSort.col === col.sortKey ? ' sorted' : '';
+    const arrow  = tableSort.col === col.sortKey ? (tableSort.dir === 1 ? ' &uarr;' : ' &darr;') : '';
+    const tip    = COL_TIPS[col.sortKey] || '';
+    thead += `<th class="${sorted}" data-sort="${col.sortKey}"${tip ? ` data-tip="${tip}"` : ''}>${col.label}${arrow}</th>`;
+  });
+  thead += '</tr></thead>';
+  table.innerHTML = thead;
+
+  // Body
+  const tbody = document.createElement('tbody');
+  rows.forEach(m => {
+    const tr = document.createElement('tr');
+    let cells = '';
+    cells += `<td class="date-cell">${m.date}</td>`;
+    cells += `<td>${m.close ? m.close.toLocaleString(undefined, {minimumFractionDigits:2}) : '—'}</td>`;
+    cells += `<td class="sim-cell">${m.similarity_pct != null ? m.similarity_pct.toFixed(3) + '%' : '—'}</td>`;
+    HORIZONS.forEach(h => {
+      const ret = (m.forward_returns || {})[String(h)];
+      if (ret == null) {
+        cells += `<td class="ret-null">—</td>`;
+      } else {
+        const cls = ret > 0 ? 'ret-pos' : ret < 0 ? 'ret-neg' : '';
+        cells += `<td class="${cls}">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</td>`;
+      }
+    });
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
+
+  // Sort click handlers
+  table.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (tableSort.col === key) {
+        tableSort.dir *= -1;
+      } else {
+        tableSort.col = key;
+        tableSort.dir = -1;
+      }
+      buildMatchesTable(wrap);
+    });
+  });
+}
+
+// ── Monthly heatmap ──────────────────────────────────────────────────────────
+function renderHeatmap() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Month-by-month SPX returns for the last 20 years. Each cell shows the percentage return for that calendar month. Green = positive, red = negative. YTD is the compounded year-to-date return.';
+  title.textContent = 'Monthly Returns Heatmap';
+  sec.appendChild(title);
+
+  // Build year/month return map from CSV
+  const monthlyMap = {};  // { year: { month: pct } }
+  const rows = csvData;
+  if (!rows || rows.length < 2) {
+    sec.innerHTML += '<div class="loading">No CSV data available.</div>';
+    return sec;
+  }
+
+  // Group closes by year+month, take last close of each month
+  const monthClose = {};
+  rows.forEach(row => {
+    const d = row['Date'];
+    if (!d || !row['Close']) return;
+    const [y, m] = d.split('-');
+    const key = y + '-' + m;
+    const close = parseFloat(row['Close']);
+    if (!isNaN(close)) {
+      if (!monthClose[key] || d > monthClose[key].date) {
+        monthClose[key] = { date: d, close: close };
+      }
+    }
+  });
+
+  // Compute monthly returns
+  const keys = Object.keys(monthClose).sort();
+  for (let i = 1; i < keys.length; i++) {
+    const curr = monthClose[keys[i]];
+    const prev = monthClose[keys[i - 1]];
+    const ret  = (curr.close / prev.close - 1) * 100;
+    const [y, m] = keys[i].split('-');
+    if (!monthlyMap[y]) monthlyMap[y] = {};
+    monthlyMap[y][parseInt(m)] = ret;
+  }
+
+  const years = Object.keys(monthlyMap).sort();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Color function
+  function cellColor(ret) {
+    if (ret == null) return '';
+    const capped = Math.max(-8, Math.min(8, ret));
+    if (ret >= 0) {
+      const t = capped / 8;
+      const g = Math.round(100 + t * 83);   // 100 -> 183
+      const r = Math.round(20 + t * 10);
+      const b = Math.round(20 + t * 10);
+      return `background:rgb(${r},${g},${b});color:${t > 0.5 ? '#0a1a0a' : '#c0e0c0'}`;
+    } else {
+      const t = Math.abs(capped) / 8;
+      const r = Math.round(100 + t * 148);  // 100 -> 248
+      const g = Math.round(20 + t * 15);
+      const b = Math.round(20 + t * 15);
+      return `background:rgb(${r},${g},${b});color:${t > 0.5 ? '#1a0a0a' : '#e0c0c0'}`;
+    }
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'heatmap-wrap';
+
+  let html = '<table class="heatmap-table"><thead><tr><th></th>';
+  months.forEach(m => html += `<th>${m}</th>`);
+  html += '<th>YTD</th></tr></thead><tbody>';
+
+  years.slice(-20).forEach(y => {
+    html += `<tr><td class="hm-year">${y}</td>`;
+    let ytd = 1;
+    months.forEach((_, mi) => {
+      const month = mi + 1;
+      const ret = (monthlyMap[y] || {})[month];
+      if (ret != null) {
+        ytd *= (1 + ret / 100);
+        const style = cellColor(ret);
+        html += `<td style="${style}">${ret >= 0 ? '+' : ''}${ret.toFixed(1)}</td>`;
+      } else {
+        html += `<td class="hm-empty">—</td>`;
+      }
+    });
+    const ytdRet = (ytd - 1) * 100;
+    const ytdStyle = cellColor(ytdRet);
+    html += `<td style="${ytdStyle};font-weight:700">${ytdRet >= 0 ? '+' : ''}${ytdRet.toFixed(1)}</td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  sec.appendChild(wrap);
+  return sec;
+}
+
+// ── Return Distribution ───────────────────────────────────────────────────────
+function quantileSorted(sorted, p) {
+  if (!sorted || sorted.length === 0) return NaN;
+  const idx  = p * (sorted.length - 1);
+  const lo   = Math.floor(idx);
+  const hi   = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
+}
+
+function computeDistStats(rets, currentPrice) {
+  if (!rets || rets.length === 0) return null;
+  const sorted = rets.slice().sort((a, b) => a - b);
+  const n      = sorted.length;
+  const mean   = rets.reduce((s, x) => s + x, 0) / n;
+  const variance = rets.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1);
+  const std    = Math.sqrt(variance);
+
+  const PCTS   = [5, 10, 15, 20, 25, 50, 75, 80, 85, 90, 95];
+  const percentiles = PCTS.map(p => {
+    const ret = quantileSorted(sorted, p / 100);
+    return { p, ret, price: currentPrice * (1 + ret / 100) };
+  });
+
+  // Symmetric empirical coverage: e.g. 80% = [P10, P90]
+  const COVERAGES = [50, 75, 80, 85, 90];
+  const coverages = COVERAGES.map(c => {
+    const tail  = (100 - c) / 2 / 100;
+    const loRet = quantileSorted(sorted, tail);
+    const hiRet = quantileSorted(sorted, 1 - tail);
+    return {
+      c,
+      loRet, hiRet,
+      loPrice: currentPrice * (1 + loRet / 100),
+      hiPrice: currentPrice * (1 + hiRet / 100),
+    };
+  });
+
+  // Empirical sigma bands (uses actual mean/std, not assuming normal)
+  const sigmas = [1, 2, 3].map(s => {
+    const loRet = mean - s * std;
+    const hiRet = mean + s * std;
+    const inBand = rets.filter(r => r >= loRet && r <= hiRet).length;
+    return {
+      s,
+      loRet, hiRet,
+      loPrice: currentPrice * (1 + loRet / 100),
+      hiPrice: currentPrice * (1 + hiRet / 100),
+      empiricalCov: (inBand / n * 100).toFixed(1),
+    };
+  });
+
+  return { mean, std, n, percentiles, coverages, sigmas };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Regime Card
+// ─────────────────────────────────────────────────────────────────────────────
+function renderRegimeCard() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Multi-dimensional regime classification based on today\'s market profile. Each dimension uses current indicator values to place the market in a named regime state. The analog engine matches within the same 200MA regime (bull/bear) automatically.';
+  title.textContent = 'Regime Classification';
+  sec.appendChild(title);
+
+  const p = indicator.current_profile || {};
+
+  function dim(label, value, detail, tone, tip) {
+    const d = document.createElement('div');
+    d.className = 'regime-dim ' + (tone || 'neutral');
+    if (tip) d.dataset.tip = tip;
+    d.innerHTML = `<div class="regime-dim-label">${label}</div>
+      <div class="regime-dim-value">${value}</div>
+      <div class="regime-dim-detail">${detail}</div>`;
+    return d;
+  }
+
+  // ── Trend dimension ──────────────────────────────────────────────────────
+  const above200 = p.above_200ma;
+  const dist200  = p.dist_200ma_pct != null ? p.dist_200ma_pct : null;
+  const above50  = p.above_50ma;
+  const above20  = p.above_20ma;
+  let trendLabel, trendTone;
+  if (above200) {
+    if      (dist200 != null && dist200 > 15)  { trendLabel = 'Extended Bull';  trendTone = 'bull'; }
+    else if (dist200 != null && dist200 > 5)   { trendLabel = 'Mid Bull';       trendTone = 'bull'; }
+    else                                        { trendLabel = 'Early Bull';     trendTone = 'neutral'; }
+  } else {
+    if      (dist200 != null && dist200 < -15) { trendLabel = 'Deep Bear';      trendTone = 'bear'; }
+    else if (dist200 != null && dist200 < -5)  { trendLabel = 'Bear Confirmed'; trendTone = 'bear'; }
+    else                                        { trendLabel = 'Entering Bear';  trendTone = 'warn'; }
+  }
+  const maStack = [above20 ? '20MA' : null, above50 ? '50MA' : null, above200 ? '200MA' : null]
+    .filter(Boolean).join(' · ') || 'Below all MAs';
+  const dist200Str = dist200 != null ? (dist200 >= 0 ? '+' : '') + dist200.toFixed(1) + '% from 200MA' : '';
+  const trendDetail = `${maStack}  ·  ${dist200Str}`;
+
+  // ── Volatility dimension ─────────────────────────────────────────────────
+  const vix = p.vix_close;
+  const vixVsRv = p.vix_vs_rv;
+  const volTrend = p.vol_trend;
+  let volLabel, volTone;
+  if      (vix == null)  { volLabel = 'No VIX data'; volTone = 'neutral'; }
+  else if (vix < 14)     { volLabel = 'Very Low Vol';  volTone = 'bull'; }
+  else if (vix < 18)     { volLabel = 'Low Vol';       volTone = 'bull'; }
+  else if (vix < 24)     { volLabel = 'Normal Vol';    volTone = 'neutral'; }
+  else if (vix < 32)     { volLabel = 'Elevated Vol';  volTone = 'warn'; }
+  else if (vix < 45)     { volLabel = 'High Vol';      volTone = 'bear'; }
+  else                   { volLabel = 'Extreme Vol';   volTone = 'bear'; }
+  const volDir = volTrend != null ? (volTrend > 1.05 ? 'Rising' : volTrend < 0.95 ? 'Falling' : 'Flat') : '';
+  const vixRvStr = vixVsRv != null ? `VIX/RV ${vixVsRv.toFixed(2)}` : '';
+  const volDetail = [vix != null ? `VIX ${vix.toFixed(1)}` : '', vixRvStr, volDir].filter(Boolean).join('  ·  ');
+
+  // ── Momentum dimension ───────────────────────────────────────────────────
+  const rsi = p.rsi_14;
+  const bbpb = p.bb_pct_b;
+  let momLabel, momTone;
+  if      (rsi == null) { momLabel = 'No RSI';    momTone = 'neutral'; }
+  else if (rsi < 30)    { momLabel = 'Oversold';  momTone = 'bull'; }
+  else if (rsi < 42)    { momLabel = 'Weak';      momTone = 'warn'; }
+  else if (rsi < 55)    { momLabel = 'Neutral';   momTone = 'neutral'; }
+  else if (rsi < 68)    { momLabel = 'Strong';    momTone = 'bull'; }
+  else                  { momLabel = 'Overbought'; momTone = 'warn'; }
+  const bbStr = bbpb != null ? `BB%B ${bbpb.toFixed(2)}` : '';
+  const momDetail = [rsi != null ? `RSI ${rsi.toFixed(1)}` : '', bbStr].filter(Boolean).join('  ·  ');
+
+  // ── Structure dimension ──────────────────────────────────────────────────
+  const dd = p.drawdown_pct != null ? p.drawdown_pct : null;
+  const fromHigh = p.dist_from_20d_high_pct != null ? p.dist_from_20d_high_pct : null;
+  let strucLabel, strucTone;
+  if      (dd == null)  { strucLabel = 'No data';          strucTone = 'neutral'; }
+  else if (dd > -2)     { strucLabel = 'Near Highs';       strucTone = 'bull'; }
+  else if (dd > -5)     { strucLabel = 'Mild Pullback';    strucTone = 'neutral'; }
+  else if (dd > -10)    { strucLabel = 'Correction';       strucTone = 'warn'; }
+  else if (dd > -20)    { strucLabel = 'Bear Market';      strucTone = 'bear'; }
+  else                  { strucLabel = 'Deep Bear Market'; strucTone = 'bear'; }
+  const ddStr = dd != null ? `Drawdown ${dd.toFixed(1)}%` : '';
+  const fhStr = fromHigh != null ? `${fromHigh.toFixed(1)}% off 20d high` : '';
+  const strucDetail = [ddStr, fhStr].filter(Boolean).join('  ·  ');
+
+  // ── Macro dimension ──────────────────────────────────────────────────────
+  const curve = p.curve_slope != null ? p.curve_slope : null;
+  const yield10 = p.yield_10y != null ? p.yield_10y : null;
+  let macroLabel, macroTone;
+  if      (curve == null)  { macroLabel = 'No macro data'; macroTone = 'neutral'; }
+  else if (curve < -0.25)  { macroLabel = 'Inverted Curve'; macroTone = 'bear'; }
+  else if (curve < 0.25)   { macroLabel = 'Flat Curve';     macroTone = 'warn'; }
+  else if (curve < 1.0)    { macroLabel = 'Normal Curve';   macroTone = 'neutral'; }
+  else                     { macroLabel = 'Steep Curve';    macroTone = 'bull'; }
+  const curveStr  = curve != null  ? `10Y-2Y ${curve >= 0 ? '+' : ''}${curve.toFixed(2)}%` : '';
+  const yieldStr  = yield10 != null ? `10Y ${yield10.toFixed(2)}%` : '';
+  const macroDetail = [curveStr, yieldStr].filter(Boolean).join('  ·  ');
+
+  // ── Credit / risk-off dimension ───────────────────────────────────────────
+  const hygRet5 = p.hyg_ret_5d != null ? p.hyg_ret_5d : null;
+  let creditLabel, creditTone;
+  if      (hygRet5 == null) { creditLabel = 'No credit data'; creditTone = 'neutral'; }
+  else if (hygRet5 > 0.3)   { creditLabel = 'Credit Strong';  creditTone = 'bull'; }
+  else if (hygRet5 > -0.3)  { creditLabel = 'Credit Stable';  creditTone = 'neutral'; }
+  else if (hygRet5 > -1.0)  { creditLabel = 'Credit Soft';    creditTone = 'warn'; }
+  else                      { creditLabel = 'Credit Stress';  creditTone = 'bear'; }
+  const creditDetail = hygRet5 != null ? `HYG 5d ret ${hygRet5 >= 0 ? '+' : ''}${hygRet5.toFixed(2)}%` : 'HYG unavailable';
+
+  const grid = document.createElement('div');
+  grid.className = 'regime-grid';
+  grid.appendChild(dim('Trend', trendLabel, trendDetail, trendTone,
+    'Which side of the 200-day MA are we on, and how extended is the move? ' +
+    'The analog engine only matches today against periods in the same regime (bull/bear) — ' +
+    'so this is the single most important filter. Extended Bull means price has run far from the 200MA ' +
+    'and analog pools become thinner. Early Bull means the trend just crossed — historically a high-reward zone.'));
+
+  grid.appendChild(dim('Volatility', volLabel, volDetail, volTone,
+    'VIX is the market\'s implied 30-day volatility — how much fear is priced into options. ' +
+    'Low VIX = calm and complacent. Spiking VIX = fear or uncertainty. ' +
+    'VIX/RV ratio compares implied vol (options pricing) to realized vol (what SPX has actually moved): ' +
+    'above 1.2 means options are expensive relative to recent movement, which can favor put sellers. ' +
+    'Rising vol trend is an early warning even if the absolute VIX level is still moderate.'));
+
+  grid.appendChild(dim('Momentum', momLabel, momDetail, momTone,
+    'RSI measures buying pressure vs selling pressure over 14 days. ' +
+    'Above 70 = overbought (buyers exhausted, mean-reversion risk). Below 30 = oversold (sellers exhausted, bounce risk). ' +
+    'BB%B shows where price sits within its 20-day Bollinger Band: near 1.0 = stretched to upper band, ' +
+    'near 0 = compressed to lower band. Neutral RSI (45-55) with mid BB%B is the most common analog pool environment.'));
+
+  grid.appendChild(dim('Structure', strucLabel, strucDetail, strucTone,
+    'How far has SPX fallen from its all-time high? Markets behave differently at different drawdown levels — ' +
+    'sentiment, positioning, and technical levels all shift. Near Highs means full risk-on positioning is likely; ' +
+    'Correction (-5 to -10%) often attracts dip buyers; Bear Market (>-10%) requires evidence of a bottom. ' +
+    'The analog engine uses drawdown as a matching feature, so today\'s structure is reflected in what it selects.'));
+
+  grid.appendChild(dim('Macro', macroLabel, macroDetail, macroTone,
+    'The yield curve slope (10Y minus 3-month Treasury) is one of the most reliable macro leading indicators. ' +
+    'An inverted curve (short rates > long rates) has preceded every US recession since 1970. ' +
+    'Normal or steep curve = expansion conditions supportive of equities. ' +
+    'The 10Y yield level matters separately — rapidly rising rates compress equity valuations by increasing ' +
+    'the discount rate applied to future earnings.'));
+
+  grid.appendChild(dim('Credit', creditLabel, creditDetail, creditTone,
+    'High-yield (junk) bond performance often leads equity markets by days to weeks. ' +
+    'When HYG falls (credit spreads widen), it signals financial stress that typically spreads to equities — ' +
+    'institutional investors de-risk credit before they de-risk equities. ' +
+    'Credit Strong or Stable = no contagion risk visible in bonds. Credit Stress = watch equities carefully. ' +
+    'This is especially useful as a confirmation signal when the analog model is showing conflicting readings.'));
+  sec.appendChild(grid);
+
+  return sec;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Price Threshold Probability Tool
+// ─────────────────────────────────────────────────────────────────────────────
+function renderPriceThreshold() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Enter price targets above and below current SPX. Uses the analog pool\'s High/Low bars — intraday touches count, not just closes. P(upside first) = fraction of analogs where the upside target was hit before (or instead of) the downside target.';
+  title.textContent = 'Price Threshold Probability';
+  sec.appendChild(title);
+
+  const fwdDist     = indicator.forward_distributions || {};
+  const currentPrice = (indicator.current_profile || {}).close;
+
+  if (!currentPrice) {
+    sec.innerHTML += '<div class="loading">No price data available.</div>';
+    return sec;
+  }
+
+  const defaultUp = Math.round(currentPrice * 1.02 / 10) * 10;
+  const defaultDn = Math.round(currentPrice * 0.98 / 10) * 10;
+
+  const controls = document.createElement('div');
+  controls.className = 'pt-controls';
+  controls.innerHTML = `
+    <div class="pt-current">Current SPX: <strong>${currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+    <div class="pt-inputs">
+      <label>Upside Target
+        <input type="number" class="pt-up" value="${defaultUp}" step="10" />
+        <span class="pt-pct pt-up-pct ret-pos"></span>
+      </label>
+      <label>Downside Target
+        <input type="number" class="pt-dn" value="${defaultDn}" step="10" />
+        <span class="pt-pct pt-dn-pct ret-neg"></span>
+      </label>
+      <label>Horizon
+        <select class="pt-h-sel">
+          <option value="1">1d</option>
+          <option value="5">5d</option>
+          <option value="10">10d</option>
+          <option value="21" selected>21d</option>
+          <option value="42">42d</option>
+          <option value="63">63d</option>
+        </select>
+      </label>
+    </div>
+  `;
+  sec.appendChild(controls);
+
+  const upInput   = controls.querySelector('.pt-up');
+  const dnInput   = controls.querySelector('.pt-dn');
+  const hSel      = controls.querySelector('.pt-h-sel');
+  const upPctSpan = controls.querySelector('.pt-up-pct');
+  const dnPctSpan = controls.querySelector('.pt-dn-pct');
+
+  const results = document.createElement('div');
+  results.className = 'pt-results';
+  sec.appendChild(results);
+
+  function bar(pct, cls) {
+    const filled = Math.min(20, Math.round(pct / 5));
+    const empty  = 20 - filled;
+    return `<span class="pt-bar ${cls}">${'█'.repeat(filled)}${'░'.repeat(empty)}</span>`;
+  }
+
+  function fmtPrice(p) {
+    return Number(p).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  function compute() {
+    const upTarget = parseFloat(upInput.value);
+    const dnTarget = parseFloat(dnInput.value);
+    const h        = hSel.value;
+
+    const upPct = (upTarget / currentPrice - 1) * 100;
+    const dnPct = (dnTarget / currentPrice - 1) * 100;
+
+    upPctSpan.textContent = (upPct >= 0 ? '+' : '') + upPct.toFixed(2) + '%';
+    dnPctSpan.textContent = (dnPct >= 0 ? '+' : '') + dnPct.toFixed(2) + '%';
+
+    const distEntry = fwdDist[h];
+    const maxRets   = distEntry && distEntry.max_returns ? distEntry.max_returns : null;
+    const minRets   = distEntry && distEntry.min_returns ? distEntry.min_returns : null;
+    const maxFirst  = distEntry && distEntry.max_first  ? distEntry.max_first  : null;
+
+    if (!maxRets || !minRets || !maxFirst) {
+      results.innerHTML = '<div class="dist-note" style="color:var(--yellow)">Regenerate indicator.json to enable price threshold analysis (run calculate_indicator.py).</div>';
+      return;
+    }
+
+    const n = maxRets.length;
+    if (!n) { results.innerHTML = '<div class="loading">No analog data.</div>'; return; }
+
+    let onlyUp = 0, onlyDn = 0, bothUpFirst = 0, bothDnFirst = 0, neither = 0;
+
+    for (let i = 0; i < n; i++) {
+      const hitsUp = maxRets[i] >= upPct;
+      const hitsDn = minRets[i] <= dnPct;
+      if      (!hitsUp && !hitsDn) { neither++; }
+      else if ( hitsUp && !hitsDn) { onlyUp++; }
+      else if (!hitsUp &&  hitsDn) { onlyDn++; }
+      else { if (maxFirst[i]) bothUpFirst++; else bothDnFirst++; }
+    }
+
+    const touchUp = onlyUp + bothUpFirst + bothDnFirst; // total times upside was ever hit
+    const touchDn = onlyDn + bothDnFirst + bothUpFirst; // total times downside was ever hit
+    // Correct counts: touchUp = analogs where hitsUp=true, touchDn = analogs where hitsDn=true
+    // Recalculate properly:
+    let tUp = 0, tDn = 0;
+    for (let i = 0; i < n; i++) {
+      if (maxRets[i] >= upPct) tUp++;
+      if (minRets[i] <= dnPct) tDn++;
+    }
+    const pUp  = tUp                           / n * 100;
+    const pDn  = tDn                           / n * 100;
+    const pUF  = (onlyUp + bothUpFirst)        / n * 100;  // upside reached first (or only)
+    const pDF  = (onlyDn + bothDnFirst)        / n * 100;  // downside reached first (or only)
+    const pNone = neither                      / n * 100;
+
+    const upStr = isNaN(upTarget) ? '—' : fmtPrice(upTarget);
+    const dnStr = isNaN(dnTarget) ? '—' : fmtPrice(dnTarget);
+
+    results.innerHTML = `
+      <div class="pt-table">
+        <div class="pt-row" style="background:transparent;font-size:10px;color:var(--muted);padding:2px 10px;">
+          <div>Scenario</div><div style="text-align:right">Prob</div><div>Count</div><div>Frequency</div>
+        </div>
+        <div class="pt-row" data-tip="Fraction of analog periods where SPX High exceeded ${upStr} at any point within ${h} trading days.">
+          <div class="pt-label">Touch upside ${upStr}</div>
+          <div class="pt-prob ret-pos">${pUp.toFixed(1)}%</div>
+          <div class="pt-count">${tUp}/${n}</div>
+          ${bar(pUp, 'ret-pos')}
+        </div>
+        <div class="pt-row" data-tip="Fraction of analog periods where SPX Low dropped below ${dnStr} at any point within ${h} trading days.">
+          <div class="pt-label">Touch downside ${dnStr}</div>
+          <div class="pt-prob ret-neg">${pDn.toFixed(1)}%</div>
+          <div class="pt-count">${tDn}/${n}</div>
+          ${bar(pDn, 'ret-neg')}
+        </div>
+        <div class="pt-row pt-divider" data-tip="Fraction of analog periods where the upside target was reached first — or only the upside was reached. If both targets hit, whichever intraday extreme came first wins.">
+          <div class="pt-label">Upside first (or only upside)</div>
+          <div class="pt-prob ret-pos">${pUF.toFixed(1)}%</div>
+          <div class="pt-count">${onlyUp + bothUpFirst}/${n}</div>
+          ${bar(pUF, 'ret-pos')}
+        </div>
+        <div class="pt-row" data-tip="Fraction of analog periods where the downside target was reached first — or only the downside was reached.">
+          <div class="pt-label">Downside first (or only downside)</div>
+          <div class="pt-prob ret-neg">${pDF.toFixed(1)}%</div>
+          <div class="pt-count">${onlyDn + bothDnFirst}/${n}</div>
+          ${bar(pDF, 'ret-neg')}
+        </div>
+        <div class="pt-row" data-tip="Fraction of analog periods where SPX stayed between both targets for the full ${h}-day horizon.">
+          <div class="pt-label">Neither target touched</div>
+          <div class="pt-prob" style="color:var(--muted)">${pNone.toFixed(1)}%</div>
+          <div class="pt-count">${neither}/${n}</div>
+          ${bar(pNone, '')}
+        </div>
+      </div>
+      <div class="dist-note">${n} analog periods &middot; ${h}d horizon &middot; upside ${upPct >= 0 ? '+' : ''}${upPct.toFixed(2)}% &middot; downside ${dnPct.toFixed(2)}% &middot; uses intraday High/Low bars</div>
+    `;
+  }
+
+  upInput.addEventListener('input',  compute);
+  dnInput.addEventListener('input',  compute);
+  hSel.addEventListener('change',    compute);
+  setTimeout(compute, 0);
+
+  return sec;
+}
+
+function renderDistributions() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Empirical return distribution built from all analog forward returns for each horizon. Percentiles, coverage ranges, and sigma bands are computed directly from the analog return arrays — no normality assumed. Select a horizon tab to explore.';
+  title.textContent = 'Return Distribution Analysis';
+  sec.appendChild(title);
+
+  const fwdDist     = indicator.forward_distributions || {};
+  const currentPrice = (indicator.current_profile || {}).close;
+
+  if (!currentPrice || Object.keys(fwdDist).length === 0) {
+    sec.innerHTML += '<div class="loading">No distribution data available.</div>';
+    return sec;
+  }
+
+  const HORIZONS = [1, 5, 10, 21, 42, 63];
+
+  // Tab bar
+  const tabBar = document.createElement('div');
+  tabBar.className = 'dist-tabs';
+
+  const content = document.createElement('div');
+  content.id = 'dist-content';
+
+  HORIZONS.forEach((h, i) => {
+    // Tab button
+    const btn = document.createElement('button');
+    btn.className = 'dist-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = h + 'd';
+    btn.addEventListener('click', () => {
+      tabBar.querySelectorAll('.dist-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      content.querySelectorAll('.dist-horizon').forEach(d => d.classList.remove('active'));
+      content.querySelector(`.dist-horizon[data-horizon="${h}"]`).classList.add('active');
+    });
+    tabBar.appendChild(btn);
+
+    // Content panel — handle both old (array) and new (dict with .returns) format
+    const distEntry = fwdDist[String(h)];
+    const rets  = Array.isArray(distEntry) ? distEntry : (distEntry && distEntry.returns ? distEntry.returns : []);
+    const stats = rets.length ? computeDistStats(rets, currentPrice) : null;
+    const div   = document.createElement('div');
+    div.className = 'dist-horizon' + (i === 0 ? ' active' : '');
+    div.dataset.horizon = h;
+
+    if (!stats) {
+      div.innerHTML = '<div class="loading">No data for this horizon.</div>';
+    } else {
+      const fmtR = r => (r >= 0 ? '+' : '') + r.toFixed(2) + '%';
+      const fmtP = p => '$' + p.toLocaleString(undefined, {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      });
+      const retCls = r => r > 0 ? 'pos' : r < 0 ? 'neg' : 'neutral';
+
+      // ─ Percentiles ─
+      let html = `<div class="dist-sub-title" data-tip="Return percentiles computed directly from the empirical distribution of analog forward returns. No normality assumption. Each tile shows the return at that percentile and the corresponding SPX price level.">Percentiles &nbsp;&mdash;&nbsp; `
+               + `n=${stats.n.toLocaleString()} analogs &nbsp;|&nbsp; `
+               + `mean ${fmtR(stats.mean)} &nbsp;|&nbsp; `
+               + `std ${stats.std.toFixed(2)}%</div>`;
+      html += '<div class="pct-grid">';
+      stats.percentiles.forEach(pt => {
+        html += `<div class="pct-cell">
+          <span class="pct-p">P${pt.p}</span>
+          <span class="pct-ret ${retCls(pt.ret)}">${fmtR(pt.ret)}</span>
+          <span class="pct-price">${fmtP(pt.price)}</span>
+        </div>`;
+      });
+      html += '</div>';
+
+      // ─ Coverage ranges ─
+      html += '<div class="dist-sub-title" data-tip="Symmetric probability intervals read directly from the sorted return distribution — no normal distribution assumed. 80% coverage = [P10, P90]: 80% of analog outcomes fell between the lower and upper return. Width = upper minus lower return.">Empirical Coverage Ranges &nbsp;&mdash;&nbsp; '
+            + 'symmetric tails, not normal-distribution assumed</div>';
+      html += '<div class="table-wrap"><table class="dist-table"><thead><tr>'
+            + '<th>Coverage</th>'
+            + '<th>Lower Ret</th><th>Lower Price</th>'
+            + '<th>Upper Ret</th><th>Upper Price</th>'
+            + '<th>Width</th>'
+            + '</tr></thead><tbody>';
+      stats.coverages.forEach(cv => {
+        const width = cv.hiRet - cv.loRet;
+        html += `<tr>
+          <td class="cov-label">${cv.c}%</td>
+          <td class="ret-neg">${fmtR(cv.loRet)}</td>
+          <td>${fmtP(cv.loPrice)}</td>
+          <td class="ret-pos">${fmtR(cv.hiRet)}</td>
+          <td>${fmtP(cv.hiPrice)}</td>
+          <td style="color:var(--dim)">${width.toFixed(2)}%</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+
+      // ─ Sigma bands ─
+      html += '<div class="dist-sub-title" data-tip="Mean +/- N standard deviations using the empirical mean and std of analog returns. A normal distribution would give 68.3% / 95.5% / 99.7% coverage — the empirical coverage% shows the actual fraction of analogs within each band, which may differ since returns are not perfectly normal.">Sigma Bands &nbsp;&mdash;&nbsp; '
+            + `empirical std = ${stats.std.toFixed(2)}% &nbsp;|&nbsp; `
+            + `empirical mean = ${fmtR(stats.mean)}</div>`;
+      html += '<div class="table-wrap"><table class="dist-table"><thead><tr>'
+            + '<th>Band</th>'
+            + '<th>Lower Ret</th><th>Lower Price</th>'
+            + '<th>Upper Ret</th><th>Upper Price</th>'
+            + '<th>Empirical Cov.</th>'
+            + '</tr></thead><tbody>';
+      stats.sigmas.forEach(sg => {
+        html += `<tr>
+          <td class="sig-label">&plusmn;${sg.s}&sigma;</td>
+          <td class="ret-neg">${fmtR(sg.loRet)}</td>
+          <td>${fmtP(sg.loPrice)}</td>
+          <td class="ret-pos">${fmtR(sg.hiRet)}</td>
+          <td>${fmtP(sg.hiPrice)}</td>
+          <td style="color:var(--dim)">${sg.empiricalCov}%</td>
+        </tr>`;
+      });
+      html += '</tbody></table>'
+            + '<div class="dist-note">Sigma bands use empirical mean and std. '
+            + 'Empirical coverage = actual fraction of analogs within the band '
+            + '(normal distribution would give 68.3% / 95.5% / 99.7%).</div>';
+
+      div.innerHTML = html;
+    }
+    content.appendChild(div);
+  });
+
+  sec.appendChild(tabBar);
+  sec.appendChild(content);
+  return sec;
+}
+
+// ── Backtest Quality ──────────────────────────────────────────────────────────
+function fmtPValue(p) {
+  if (p === 0) return '<1e-300';
+  if (p < 0.0001) return p.toExponential(1);
+  return p.toFixed(4);
+}
+
+function renderBacktestQuality() {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.dataset.tip = 'Walk-forward backtest covering 1996-2025 (7,500+ trading days). No lookahead — each prediction uses only data available at that time. Directional accuracy = fraction of calls (up/down) that were correct.';
+  title.textContent = 'Backtest Quality  (1996-2025, walk-forward)';
+  sec.appendChild(title);
+
+  if (!backtestData) {
+    sec.innerHTML += '<div class="loading">backtest_results.json not loaded.</div>';
+    return sec;
+  }
+
+  const hz = backtestData.horizons || {};
+  const HORIZONS = [1, 5, 10, 21, 42, 63];
+
+  // ── Summary table ──────────────────────────────────────────────────────────
+  let html = '<div class="table-wrap"><table class="dist-table"><thead><tr>'
+    + '<th>Horizon</th>'
+    + '<th data-tip="Overall directional accuracy: fraction of all calls (bull + bear) that were correct.">Accuracy</th>'
+    + '<th data-tip="95% Wilson confidence interval on the directional accuracy.">95% CI</th>'
+    + '<th data-tip="One-tailed p-value: probability of seeing this accuracy by chance if the true rate were 50%. Very small = highly statistically significant.">p-value</th>'
+    + '<th data-tip="Brier Skill Score: improvement over a naive model that always predicts the base rate. Negative here means the raw analog vote clusters tightly around the base rate rather than varying day-to-day — the edge is a directional bias, not probability variation.">Brier Skill</th>'
+    + '<th data-tip="Directional accuracy on 2022-2025 data only — tests whether the signal holds in the post-COVID high-rate environment.">2022+ Holdout</th>'
+    + '</tr></thead><tbody>';
+
+  HORIZONS.forEach(h => {
+    const d = hz[String(h)];
+    if (!d) return;
+    const acc    = d.overall_accuracy;
+    const ci     = d.ci_95 ? `[${d.ci_95[0]}–${d.ci_95[1]}%]` : '—';
+    const pv     = d.p_value != null ? fmtPValue(d.p_value) : '—';
+    const bs     = d.brier_skill != null ? (d.brier_skill >= 0 ? '+' : '') + (d.brier_skill * 100).toFixed(2) + 'pp' : '—';
+    const bsCls  = (d.brier_skill || 0) >= 0 ? 'ret-pos' : 'ret-neg';
+    const rh     = d.recent_holdout;
+    const rhStr  = rh ? rh.overall_accuracy + '%' : '—';
+    const rhDiff = rh ? rh.overall_accuracy - acc : 0;
+    const rhCls  = rhDiff >= 0 ? 'ret-pos' : 'ret-neg';
+    html += `<tr>
+      <td style="color:var(--blue);font-weight:700">${h}d</td>
+      <td style="font-weight:600">${acc}%</td>
+      <td style="color:var(--dim);font-size:11px">${ci}</td>
+      <td style="color:var(--dim);font-size:11px">${pv}</td>
+      <td class="${bsCls}">${bs}</td>
+      <td class="${rhCls}">${rhStr}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  html += '<div class="bt-note">Brier skill &lt;0: the raw analog vote clusters around the base rate rather than varying day-to-day. '
+        + 'The edge is a consistent directional bias (upward lean), not probabilistic variation per day. '
+        + 'p-values confirm the directional bias is statistically significant across all horizons.</div>';
+  sec.innerHTML += html;
+
+  // ── Rolling accuracy chart ─────────────────────────────────────────────────
+  const chartTitle = document.createElement('div');
+  chartTitle.className = 'dist-sub-title';
+  chartTitle.dataset.tip = '252-day rolling directional accuracy, sampled every 5 trading days. Shows how the engine performed through different regimes (dot-com crash, 2008 crisis, 2020 crash, 2022 bear). Dashed line = 50% coin flip.';
+  chartTitle.style.marginTop = '20px';
+  chartTitle.textContent = 'Rolling 252-day Accuracy';
+  sec.appendChild(chartTitle);
+
+  const canvasWrap = document.createElement('div');
+  canvasWrap.style.cssText = 'position:relative;height:220px;margin-top:8px';
+  const canvas = document.createElement('canvas');
+  canvas.id = 'rolling-acc-chart';
+  canvasWrap.appendChild(canvas);
+  sec.appendChild(canvasWrap);
+
+  // ── Fine calibration tabs ──────────────────────────────────────────────────
+  const calTitle = document.createElement('div');
+  calTitle.className = 'dist-sub-title';
+  calTitle.dataset.tip = 'Predicted probability broken into 5pp buckets. Each row shows how many backtest days fell in that bucket and the actual up% that followed. Well-calibrated = predicted% ≈ actual%. Diff shows how much the actual rate over/under-shot the predicted.';
+  calTitle.style.marginTop = '20px';
+  calTitle.textContent = 'Fine Calibration by Predicted Probability (5pp buckets)';
+  sec.appendChild(calTitle);
+
+  const calTabBar = document.createElement('div');
+  calTabBar.className = 'dist-tabs';
+  const calContent = document.createElement('div');
+
+  HORIZONS.forEach((h, i) => {
+    const d = hz[String(h)];
+
+    const btn = document.createElement('button');
+    btn.className = 'dist-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = h + 'd';
+    btn.addEventListener('click', () => {
+      calTabBar.querySelectorAll('.dist-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calContent.querySelectorAll('.cal-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+      const panel = calContent.querySelector(`.cal-panel[data-h="${h}"]`);
+      if (panel) { panel.classList.add('active'); panel.style.display = 'block'; }
+    });
+    calTabBar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'cal-panel' + (i === 0 ? ' active' : '');
+    panel.dataset.h = h;
+    panel.style.display = i === 0 ? 'block' : 'none';
+
+    if (d && d.fine_calibration) {
+      let tbl = '<div class="table-wrap"><table class="dist-table"><thead><tr>'
+        + '<th>Predicted</th><th>Days</th><th>Avg Pred</th><th>Actual Up%</th><th>Diff</th><th>Bar</th>'
+        + '</tr></thead><tbody>';
+      Object.entries(d.fine_calibration).forEach(([name, fc]) => {
+        if (!fc.count) return;
+        const diff    = fc.actual_up_rate - fc.avg_predicted;
+        const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'pp';
+        const diffCls = diff > 5 ? 'ret-pos' : diff < -5 ? 'ret-neg' : '';
+        const barLen  = Math.round(fc.actual_up_rate / 5);
+        const barCls  = fc.actual_up_rate >= 60 ? 'ret-pos' : fc.actual_up_rate < 50 ? 'ret-neg' : '';
+        tbl += `<tr>
+          <td class="cov-label">${name}</td>
+          <td style="color:var(--dim)">${fc.count}</td>
+          <td style="color:var(--dim)">${fc.avg_predicted}%</td>
+          <td style="font-weight:600">${fc.actual_up_rate}%</td>
+          <td class="${diffCls}">${diffStr}</td>
+          <td class="${barCls}" style="font-family:monospace;letter-spacing:-1px;font-size:10px">${'|'.repeat(barLen)}</td>
+        </tr>`;
+      });
+      tbl += '</tbody></table></div>';
+      panel.innerHTML = tbl;
+    } else {
+      panel.innerHTML = '<div class="loading">No calibration data.</div>';
+    }
+    calContent.appendChild(panel);
+  });
+
+  sec.appendChild(calTabBar);
+  sec.appendChild(calContent);
+
+  // Render chart after DOM is attached
+  setTimeout(() => renderRollingChart(hz), 0);
+  return sec;
+}
+
+function renderRollingChart(hz) {
+  const canvas = document.getElementById('rolling-acc-chart');
+  if (!canvas) return;
+
+  const SHOW = [
+    { h: '5',  label: '5d',  color: '#60a5fa' },
+    { h: '21', label: '21d', color: '#34d399' },
+    { h: '63', label: '63d', color: '#a78bfa' },
+  ];
+
+  // Use 21d dates as x-axis reference
+  const ref    = hz['21']?.rolling_accuracy || [];
+  const labels = ref.map(r => r.date);
+
+  const datasets = SHOW.map(cfg => {
+    const map = {};
+    (hz[cfg.h]?.rolling_accuracy || []).forEach(r => { map[r.date] = r.accuracy; });
+    return {
+      label:           cfg.label,
+      data:            labels.map(d => map[d] ?? null),
+      borderColor:     cfg.color,
+      backgroundColor: 'transparent',
+      borderWidth:     1.5,
+      pointRadius:     0,
+      tension:         0.3,
+      spanGaps:        true,
+    };
+  });
+
+  datasets.push({
+    label:       '50% (coin flip)',
+    data:        labels.map(() => 50),
+    borderColor: '#2a2a3a',
+    borderDash:  [5, 5],
+    borderWidth: 1,
+    pointRadius: 0,
+    tension:     0,
+  });
+
+  new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          labels: { color: '#8888a0', font: { size: 11 }, boxWidth: 18, padding: 14 },
+        },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#555568', maxTicksLimit: 10, font: { size: 10 }, maxRotation: 0 },
+          grid:  { color: '#1a1a22' },
+        },
+        y: {
+          min: 45, max: 80,
+          ticks: { color: '#555568', font: { size: 10 }, callback: v => v + '%' },
+          grid:  { color: '#1a1a22' },
+        },
+      },
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
