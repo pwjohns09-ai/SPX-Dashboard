@@ -1,20 +1,15 @@
 {
-  "generated_at": "2026-06-10T23:17:44.586114",
+  "generated_at": "2026-06-11T23:12:36.403871",
   "data_range": {
     "start": "1990-01-02",
-    "end": "2026-06-10",
-    "trading_days": 9177
+    "end": "2026-06-11",
+    "trading_days": 9178
   },
   "upcoming_events": [
     {
-      "type": "CPI",
-      "date": "2026-06-10",
-      "trading_days_away": 0
-    },
-    {
       "type": "FOMC",
       "date": "2026-06-17",
-      "trading_days_away": 5
+      "trading_days_away": 4
     },
     {
       "type": "NFP",
@@ -24,7 +19,7 @@
     {
       "type": "CPI",
       "date": "2026-07-08",
-      "trading_days_away": 20
+      "trading_days_away": 19
     }
   ],
   "config": {
@@ -128,64 +123,64 @@
       "std": 0.33368766101871755
     },
     "cum_return": {
-      "std": 2.291425065179262
+      "std": 2.2915633032556104
     },
     "realized_vol_21d": {
-      "std": 4.889898056114318
+      "std": 4.88966722196947
     },
     "dist_50ma_pct": {
-      "std": 2.458872134251263
+      "std": 2.4586943923697344
     },
     "dist_200ma_pct": {
-      "std": 4.02347544928526
+      "std": 4.023188469138954
     },
     "drawdown_pct": {
-      "std": 9.541544268027542
+      "std": 9.54096825708829
     },
     "dist_from_20d_high_pct": {
-      "std": 1.5438505804179818
+      "std": 1.5438588027597484
     },
     "ret_1d": {
-      "std": 0.8193269769261955
+      "std": 0.8195137330469807
     },
     "ret_3d": {
-      "std": 1.3772647814887282
+      "std": 1.3771730622419187
     },
     "ret_5d": {
-      "std": 1.7271175865534023
+      "std": 1.7273563960246534
     },
     "ret_10d": {
-      "std": 2.291425065179262
+      "std": 2.2915633032556104
     },
     "vol_trend": {
-      "std": 0.22179427308152358
+      "std": 0.22177853400963093
     },
     "above_20ma": {
-      "std": 0.4525940934607577
+      "std": 0.4526431173244125
     },
     "above_50ma": {
-      "std": 0.4027012280220125
+      "std": 0.40267925858435427
     },
     "above_200ma": {
       "std": 1.0
     },
     "rsi_14": {
-      "std": 10.111436309601093
+      "std": 10.11106260842381
     },
     "bb_pct_b": {
-      "std": 0.2951098839776885
+      "std": 0.29511581231890477
     },
     "opex_week": {
-      "std": 0.4227151048590012
+      "std": 0.4226935305775156
     },
     "quarter_end": {
-      "std": 0.3721745734206541
+      "std": 0.3721527279018771
     },
     "vol_ratio": {
-      "std": 0.16479658382005508
+      "std": 0.16478566123398475
     },
     "atr_ratio": {
-      "std": 0.4429897700377323
+      "std": 0.44302623387784507
     },
     "vix_close": {
       "std": 4.710217036475364
@@ -197,34 +192,34 @@
       "std": 0.3737858606979945
     },
     "fomc_dist": {
-      "std": 10.113793788165825
+      "std": 10.113077951496818
     },
     "nfp_dist": {
-      "std": 6.667229101429539
+      "std": 6.667447111350636
     },
     "cpi_dist": {
-      "std": 6.711077209383223
+      "std": 6.710858354889244
     },
     "vix_term": {
       "std": 0.06492706196929669
     },
     "hyg_ret_1d": {
-      "std": 0.38851701011675777
+      "std": 0.38857240656866787
     },
     "hyg_ret_5d": {
-      "std": 0.866686652698105
+      "std": 0.8665693328998622
     },
     "yield_10y": {
-      "std": 1.8888609110668255
+      "std": 1.8887256989402361
     },
     "curve_slope": {
-      "std": 1.259097229627322
+      "std": 1.2590277714092886
     },
     "dxy_ret_5d": {
       "std": 1.0329075123671232
     },
     "gold_ret_5d": {
-      "std": 2.211411077824488
+      "std": 2.213258095156466
     }
   },
   "regime": {
@@ -237,42 +232,42 @@
     "message": "Insufficient high-quality analog matches for reliable statistical inference."
   },
   "current_profile": {
-    "date": "2026-06-10",
-    "close": 7266.99,
+    "date": "2026-06-11",
+    "close": 7394.3,
     "pattern_distance": 0.0,
-    "cum_return": -3.3691,
-    "realized_vol_21d": 13.935,
-    "dist_50ma_pct": 0.7436,
-    "dist_200ma_pct": 5.7416,
-    "drawdown_pct": -4.5046,
-    "dist_from_20d_high_pct": -4.5046,
-    "ret_1d": -1.6199,
-    "ret_3d": -1.5812,
-    "ret_5d": -3.7954,
-    "ret_10d": -3.3691,
-    "vol_trend": 0.9035,
+    "cum_return": -2.2387,
+    "realized_vol_21d": 15.3205,
+    "dist_50ma_pct": 2.263,
+    "dist_200ma_pct": 7.5194,
+    "drawdown_pct": -2.8316,
+    "dist_from_20d_high_pct": -2.8316,
+    "ret_1d": 1.7519,
+    "ret_3d": -0.1543,
+    "ret_5d": -2.5053,
+    "ret_10d": -2.2387,
+    "vol_trend": 0.9948,
     "above_20ma": 0.0,
     "above_50ma": 1.0,
     "above_200ma": 1.0,
-    "rsi_14": 40.636,
-    "bb_pct_b": -0.0456,
+    "rsi_14": 50.3073,
+    "bb_pct_b": 0.3031,
     "opex_week": 0.0,
     "quarter_end": 0.0,
-    "vol_ratio": 0.9764,
-    "atr_ratio": 1.4772,
-    "vix_close": 22.22,
-    "vix_ret_5d": 38.3562,
-    "vix_vs_rv": 1.5945,
-    "fomc_dist": -5.0,
-    "nfp_dist": 3.0,
-    "cpi_dist": 0.0,
-    "vix_term": 0.9707,
-    "hyg_ret_1d": -0.1884,
-    "hyg_ret_5d": -0.2636,
-    "yield_10y": 4.542,
-    "curve_slope": 0.907,
+    "vol_ratio": 1.0545,
+    "atr_ratio": 1.6515,
+    "vix_close": null,
+    "vix_ret_5d": null,
+    "vix_vs_rv": null,
+    "fomc_dist": -4.0,
+    "nfp_dist": 4.0,
+    "cpi_dist": 1.0,
+    "vix_term": null,
+    "hyg_ret_1d": 0.5914,
+    "hyg_ret_5d": 0.1378,
+    "yield_10y": 4.463,
+    "curve_slope": 0.84,
     "dxy_ret_5d": null,
-    "gold_ret_5d": -8.1619
+    "gold_ret_5d": -6.0666
   },
   "forward_probabilities": [],
   "matches": [],
